@@ -1,4 +1,4 @@
-## This repository contains the sorce codes and lecture materials for the course "CS231n: Deep Learning for Computer Vision" at Stanford University.
+## This repository contains the source codes and lecture materials for the course "CS231n: Deep Learning for Computer Vision" at Stanford University.
 
 The course is taught by Fei-Fei Li, Justin Johnson, and Serena Yeung. The lecture videos are available on YouTube, and the lecture notes and assignments are available on the course website.
 The course covers a wide range of topics in deep learning for computer vision, including convolutional neural networks, recurrent neural networks, generative adversarial networks, and more. The assignments are designed to give students hands-on experience with implementing and training deep learning models for computer vision tasks.
