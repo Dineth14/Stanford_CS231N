@@ -1,0 +1,65 @@
+.DS_Store
+Thumbs.db
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Editor and notebook artifacts
+.vscode/
+.idea/
+*.ipynb_checkpoints
+
+# Logs and local runtime files
+*.log
+
+# Node.js dependencies and build artifacts
+**/node_modules/
+**/dist/
+
+# Model checkpoints and large generated assets
+*.pth
+*.pt
+
+# Local dataset copies
+**/cifar-10-batches-py/
+**/data/
+# Models
+*.model
+*.pkl
+*.pickle
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.ckpt
+*.onnx
+*.pb
+*.bin
+*.weights
+*.caffemodel
+*.npy
+*.npz
+
+# Model directories
+models/
+checkpoints/
+saved_models/
+weights/

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>08 · Mathematical Theory — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">08 · Mathematical Theory</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link active" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 08</div>
+    <h1 class="page-title">Mathematical Theory</h1>
+    <p class="page-lead">Complete derivations: SSM discretisation, CNN as finite-impulse SSM, attention as kernel regression, and the SSM transfer function in the frequency domain.</p>
+  </div>
+
+  <section class="section" id="ssm-discretisation">
+    <h2>SSM Discretisation Derivation</h2>
+
+    <p>Starting from the continuous-time ODE:</p>
+    <div class="eq-block">$$\dot{h}(t) = Ah(t) + Bu(t)$$</div>
+
+    <p>The exact solution over interval $[t, t+\Delta]$ via variation of parameters:</p>
+    <div class="eq-block">$$h(t+\Delta) = e^{\Delta A}h(t) + \int_0^\Delta e^{(\Delta-\tau)A} B\, u(t+\tau)\, d\tau$$</div>
+
+    <p>
+      Under the Zero-Order Hold (ZOH) assumption — input $u$ is constant over each interval —
+      the integral evaluates to:
+    </p>
+    <div class="eq-block">$$\bar{B} = \left(\int_0^\Delta e^{sA}\, ds\right) B = (\Delta A)^{-1}(e^{\Delta A} - I)\Delta B$$</div>
+
+    <p>Giving the discrete recurrence:</p>
+    <div class="eq-block">$$h_t = \bar{A}h_{t-1} + \bar{B}u_t, \qquad \bar{A} = e^{\Delta A}$$</div>
+
+    <p>
+      For diagonal $A$ (our implementation), all matrix operations reduce to element-wise:
+      $\bar{A}_{ii} = e^{\Delta a_i}$, requiring no matrix inversion.
+    </p>
+  </section>
+
+  <section class="section" id="cnn-as-ssm">
+    <h2>CNN as a Special Case of SSM</h2>
+
+    <p>
+      A causal FIR filter (finite impulse response) with coefficients $g_0, g_1, \ldots, g_k$
+      can be written as an SSM with $A$ being a shift matrix:
+    </p>
+    <div class="eq-block">
+      $$A = \begin{pmatrix} 0 & 1 & 0 & \cdots \\ 0 & 0 & 1 & \cdots \\ \vdots & & & \ddots \end{pmatrix}, \quad B = \mathbf{e}_1, \quad C = \begin{pmatrix} g_0 & g_1 & \cdots & g_k \end{pmatrix}$$
+    </div>
+
+    <p>
+      A convolutional layer with kernel $g$ is precisely an FIR filter applied at every position.
+      Therefore: <strong>CNN = SSM with finite impulse response and time-invariant parameters.</strong>
+    </p>
+    <p>
+      Mamba relaxes two constraints: (1) the state matrix $A$ need not be a shift matrix
+      (any stable diagonal $A$ is allowed), and (2) $B, C, \Delta$ can be input-dependent
+      (selective). This gives SSM strictly more expressive power than convolution.
+    </p>
+  </section>
+
+  <section class="section" id="attn-kernel">
+    <h2>Attention as Kernel Regression</h2>
+
+    <p>
+      The softmax attention $\text{Attn}(Q,K,V)_i = \sum_j \frac{e^{q_i \cdot k_j / \sqrt{d}}}{\sum_l e^{q_i \cdot k_l / \sqrt{d}}} v_j$
+      can be viewed as a non-parametric kernel regression:
+    </p>
+    <div class="eq-block">$$\hat{y}_i = \sum_j \kappa(q_i, k_j) \cdot v_j, \qquad \kappa(q, k) = \frac{e^{q \cdot k / \sqrt{d}}}{\sum_l e^{q \cdot k_l / \sqrt{d}}}$$</div>
+
+    <p>
+      The kernel $\kappa$ is the exponential kernel (related to the RBF kernel) normalised over
+      all key positions. This is the Nadaraya-Watson kernel estimator.
+      Unlike convolution, the kernel weights $\kappa(q_i, k_j)$ depend on the <em>content</em>
+      of the input — making attention a <strong>data-adaptive, non-linear, non-stationary filter</strong>.
+    </p>
+  </section>
+
+  <section class="section" id="ssm-frequency">
+    <h2>SSM Transfer Function in the Frequency Domain</h2>
+
+    <p>Taking the Laplace transform of the continuous SSM:</p>
+    <div class="eq-block">$$H(s) = C(sI - A)^{-1}B + D$$</div>
+
+    <p>On the imaginary axis ($s = j\omega$), this gives the frequency response:</p>
+    <div class="eq-block">$$H(j\omega) = C(j\omega I - A)^{-1}B + D$$</div>
+
+    <p>
+      For diagonal $A$ with eigenvalues $a_i$ (all real, negative), the $i$-th
+      pole is at $s = a_i$, contributing a first-order low-pass filter with cutoff $|a_i|$:
+    </p>
+    <div class="eq-block">$$H_i(j\omega) = \frac{B_i C_i}{j\omega - a_i}$$</div>
+
+    <p>
+      The full transfer function is a sum of these first-order filters —
+      an <strong>infinite impulse response (IIR) filter</strong> with poles at $\{a_i\}$.
+      This explains Mamba's smooth low-pass rolloff in frequency response experiments.
+    </p>
+  </section>
+
+  <section class="section" id="hippo">
+    <h2>HiPPO Matrix &amp; Memory Preservation</h2>
+
+    <p>
+      The HiPPO (High-order Polynomial Projection Operator) matrix $A$ is defined such that
+      the SSM hidden state $h(t)$ encodes the optimal polynomial approximation of $u(s)$ for $s \le t$
+      in the $L^2$ sense with a measure $\mu$.
+    </p>
+    <p>
+      For the LegS (Legendre-Scaled) measure, the HiPPO matrix is:
+    </p>
+    <div class="eq-block">$$(A_\text{HiPPO})_{nk} = -\begin{cases}(2n+1)^{1/2}(2k+1)^{1/2} & \text{if } n > k \\ n+1 & \text{if } n = k \\ 0 & \text{if } n < k\end{cases}$$</div>
+
+    <p>
+      Our simplified diagonal initialisation ($a_i = -e^{\log(i+1)}$) approximates this:
+      eigenvalues spaced log-uniformly give diverse memory timescales, from
+      fast-decay (large $|a_i|$, recent history) to slow-decay (small $|a_i|$, long-term memory).
+    </p>
+  </section>
+
+  <section class="section" id="unified">
+    <h2>Unified Framework</h2>
+
+    <p>All three architectures are instances of a general <strong>sequence-to-sequence operator</strong>:</p>
+    <div class="eq-block">$$y = \mathcal{A}(x), \quad \mathcal{A} \in \{\text{Conv},\, \text{Attention},\, \text{SSM}\}$$</div>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th class="col-cnn">CNN (FIR)</th>
+          <th class="col-vit">ViT (Attention)</th>
+          <th class="col-mamba">Mamba (IIR SSM)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="row-label">Kernel type</td><td>FIR (finite)</td><td>Adaptive non-parametric</td><td>IIR (infinite)</td></tr>
+        <tr><td class="row-label">Time-invariant</td><td>Yes</td><td>No (data-dependent)</td><td>No (selective)</td></tr>
+        <tr><td class="row-label">Complexity</td><td>$O(N)$</td><td>$O(N^2)$</td><td>$O(N)$</td></tr>
+        <tr><td class="row-label">RF</td><td>$k$ (finite)</td><td>$N$ (global)</td><td>$N$ (causal)</td></tr>
+        <tr><td class="row-label">Frequency bias</td><td>Bandpass (bandlimited)</td><td>None (data-learned)</td><td>Low-pass (IIR rolloff)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="07-remote-sensing.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Remote Sensing</a>
+    <a href="09-failure-modes.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Failure Modes →</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

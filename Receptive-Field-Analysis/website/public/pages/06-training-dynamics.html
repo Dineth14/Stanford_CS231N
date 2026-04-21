@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>06 · Training Dynamics — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">06 · Training Dynamics</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link active" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 06</div>
+    <h1 class="page-title">Training Dynamics</h1>
+    <p class="page-lead">Loss curves, gradient norms, and weight update magnitudes from the toy training experiment (500 images, 20 epochs, random labels).</p>
+  </div>
+
+  <section class="section" id="experiment">
+    <h2>Experiment Setup</h2>
+    <div class="callout callout-info">
+      <div class="callout-title">ℹ️ Toy Experiment Note</div>
+      500 random images, random labels, 10 classes. The purpose is NOT to measure accuracy —
+      it's to observe convergence behaviour, gradient flow, and optimisation dynamics
+      that reveal architectural characteristics. Adam lr=1e-3, 20 epochs.
+    </div>
+  </section>
+
+  <section class="section" id="loss-curves">
+    <h2>Training Loss Curves</h2>
+    <div class="chart-wrap">
+      <div class="chart-title">Cross-Entropy Loss per Epoch</div>
+      <canvas id="loss-chart" height="300"></canvas>
+      <div class="chart-note">
+        CNN typically converges fastest (inductive bias helps even with random labels).
+        ViT starts slowly (no spatial prior → explores more). Mamba is smooth (stable SSM eigenvalues).
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="gradients">
+    <h2>Gradient Norms</h2>
+    <div class="chart-wrap">
+      <div class="chart-title">Gradient L2 Norm per Epoch</div>
+      <canvas id="grad-norm-chart" height="300"></canvas>
+      <div class="chart-note">
+        Exploding gradients → norm grows unboundedly. Vanishing gradients → norm collapses to 0.
+        BatchNorm helps CNN stay stable. ViT LayerNorm + gradient clipping is typically needed.
+        Mamba benefits from stable negative eigenvalues in A.
+      </div>
+    </div>
+
+    <h3>Gradient Flow Theory</h3>
+    <p>For a network with $L$ layers, the gradient at layer $l$ is:</p>
+    <div class="eq-block">$$\frac{\partial \mathcal{L}}{\partial W_l} = \frac{\partial \mathcal{L}}{\partial h_L} \prod_{k=l+1}^{L} \frac{\partial h_k}{\partial h_{k-1}} \cdot \frac{\partial h_l}{\partial W_l}$$</div>
+    <p>
+      If the Jacobian norm $\|\partial h_k / \partial h_{k-1}\| < 1$, gradients vanish exponentially.
+      If $> 1$, they explode. BatchNorm and residual connections help maintain norms near 1.
+    </p>
+    <p>
+      SSM's gradient through the recurrence $h_t = \bar{A}h_{t-1} + \bar{B}u_t$ has
+      gradient: $\partial h_t/\partial h_{t-1} = \bar{A}$.
+      Since all diagonal elements of $\bar{A} \in (0,1)$, gradients are
+      bounded without additional tricks.
+    </p>
+  </section>
+
+  <section class="section" id="weight-updates">
+    <h2>Weight Update Magnitude</h2>
+    <div class="chart-wrap">
+      <div class="chart-title">Mean Weight Update Magnitude per Epoch</div>
+      <canvas id="weight-update-chart" height="300"></canvas>
+      <div class="chart-note">Mean L2 norm of weight deltas across all trainable layers.</div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4 class="h4 tag-cnn">CNN</h4>
+        <p class="small muted">Fast convergence. Early large updates, then stabilise as the model learns local features. Inductive bias guides the optimiser efficiently.</p>
+      </div>
+      <div class="card">
+        <h4 class="h4 tag-vit">ViT</h4>
+        <p class="small muted">Needs learning rate warmup. Without pretraining, attention weights are initially near-uniform (all tokens contribute equally), causing slow convergence.</p>
+      </div>
+      <div class="card">
+        <h4 class="h4 tag-mamba">Mamba</h4>
+        <p class="small muted">Smooth gradient flow from bounded $\bar{A}$. The gating mechanism (SiLU) provides adaptive learning rate effects. Generally stable updates.</p>
+      </div>
+    </div>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="05-model-parameters.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Model Parameters</a>
+    <a href="07-remote-sensing.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Remote Sensing →</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>10 · Head-to-Head — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">10 · Head-to-Head</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link active" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 10</div>
+    <h1 class="page-title">Head-to-Head Comparison</h1>
+    <p class="page-lead">Spider chart, decision flowchart, and detailed pros/cons across eight capability dimensions.</p>
+  </div>
+
+  <section class="section" id="spider">
+    <h2>Multi-Dimensional Radar Chart</h2>
+    <p>Eight dimensions scored 0–10 based on experimental results and theoretical analysis.</p>
+    <div class="chart-wrap" id="spider-chart-wrap">
+      <canvas id="spider-chart"></canvas>
+    </div>
+  </section>
+
+  <section class="section" id="flowchart">
+    <h2>Decision Flowchart: Which Architecture to Use?</h2>
+
+    <div class="callout callout-info">
+      <div class="callout-title">Flowchart Logic</div>
+      <ol style="margin:0; padding-left:1.2rem">
+        <li><strong>Is the dataset small (&lt;50K images)?</strong>
+          → Prefer CNN (strong inductive bias) or Mamba (less hungry than ViT).</li>
+        <li><strong>Do objects require global context (flooding, land use)?</strong>
+          → If yes: ViT (unlimited RF) or Mamba (long causal memory).
+          If no (roads, buildings): CNN.</li>
+        <li><strong>Is the input a 1D spectral sequence (hyperspectral)?</strong>
+          → Mamba first, ViT second, CNN last.</li>
+        <li><strong>Is inference memory constrained (edge devices)?</strong>
+          → CNN first (O(N) memory), Mamba second, avoid ViT (O(N²)).</li>
+        <li><strong>Is interpretability required?</strong>
+          → CNN (filter visualisation), ViT (attention maps), Mamba (complex).</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="pros-cons">
+    <h2>Pros &amp; Cons Cards</h2>
+
+    <div class="heatmap-row">
+      <div class="card" style="border-color:var(--green)">
+        <div class="card-title" style="color:var(--green)">CNN Pros</div>
+        <ul>
+          <li>Parameter efficient</li>
+          <li>Translation equivariant (inductive bias)</li>
+          <li>Fast inference, O(N) memory</li>
+          <li>Works well on small datasets</li>
+          <li>Stable training, easy to tune</li>
+          <li>Interpretable filters (Gabor-like)</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:var(--amber)">
+        <div class="card-title" style="color:var(--amber)">ViT Pros</div>
+        <ul>
+          <li>Global RF from layer 1</li>
+          <li>Scales well with more data</li>
+          <li>Attention maps provide attribution</li>
+          <li>Flexible positional encoding</li>
+          <li>Strong with pretraining (DINO, MAE)</li>
+          <li>Data-adaptive frequency filtering</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:var(--pink)">
+        <div class="card-title" style="color:var(--pink)">Mamba Pros</div>
+        <ul>
+          <li>O(N) complexity with global context</li>
+          <li>IIR filters: richer frequency response</li>
+          <li>Natural fit for sequential/spectral data</li>
+          <li>Selective: ignores irrelevant tokens</li>
+          <li>Long-range memory via stable eigenvalues</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="heatmap-row" style="margin-top:1rem">
+      <div class="card" style="border-color:var(--green)">
+        <div class="card-title" style="color:var(--green)">CNN Cons</div>
+        <ul>
+          <li>RF grows only linearly with depth</li>
+          <li>Cannot model long-range dependencies</li>
+          <li>Aliasing with strided convolutions</li>
+          <li>Cross-sensor transfer is fragile</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:var(--amber)">
+        <div class="card-title" style="color:var(--amber)">ViT Cons</div>
+        <ul>
+          <li>O(N²) attention: huge memory cost</li>
+          <li>Data-hungry without pretraining</li>
+          <li>Learnable pos. embed. breaks for new sizes</li>
+          <li>Quadratic cost prevents large images</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:var(--pink)">
+        <div class="card-title" style="color:var(--pink)">Mamba Cons</div>
+        <ul>
+          <li>Causal scan breaks 2D symmetry</li>
+          <li>Vertical pixel relationships degraded</li>
+          <li>Harder to interpret than CNN/ViT</li>
+          <li>Less well-studied for vision tasks</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="full-table">
+    <h2>Full Comparison Table</h2>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Dimension</th>
+          <th class="col-cnn">CNN</th>
+          <th class="col-vit">ViT</th>
+          <th class="col-mamba">Mamba</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="row-label">Receptive Field</td><td>9 px (theoretical)</td><td>Full image (global)</td><td>Causal full length</td></tr>
+        <tr><td class="row-label">Complexity</td><td>O(N)</td><td>O(N²)</td><td>O(N)</td></tr>
+        <tr><td class="row-label">Freq. response</td><td>Bandpass bias</td><td>Adaptive (learned)</td><td>Low-pass IIR</td></tr>
+        <tr><td class="row-label">Training stability</td><td>High</td><td>Medium (needs warmup)</td><td>Medium</td></tr>
+        <tr><td class="row-label">Data efficiency</td><td>High</td><td>Low (without pretrain)</td><td>Medium</td></tr>
+        <tr><td class="row-label">Interpretability</td><td>High</td><td>Medium (attn maps)</td><td>Low</td></tr>
+        <tr><td class="row-label">Small datasets</td><td>Best</td><td>Worst</td><td>Good</td></tr>
+        <tr><td class="row-label">Large images</td><td>Good</td><td>Poor (quadratic)</td><td>Best</td></tr>
+        <tr><td class="row-label">Spectral sequences</td><td>Poor</td><td>Good</td><td>Best</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="09-failure-modes.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Failure Modes</a>
+    <a href="11-conclusion.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Conclusion →</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

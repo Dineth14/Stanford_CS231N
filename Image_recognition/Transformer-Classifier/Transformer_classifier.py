@@ -1,5 +1,6 @@
 # Vision Transformer (ViT) Classifier for CIFAR-10 Dataset
 
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -115,7 +116,7 @@ def get_device():
     if torch.cuda.is_available():
         device = torch.device('cuda')
         print(f'Using GPU: {torch.cuda.get_device_name(0)}')
-        print(f'GPU Memory: {torch.cuda.get_device_properties(0).total_mem / 1024**3:.1f} GB')
+        print(f'GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB')
     else:
         device = torch.device('cpu')
         print('Using CPU')
@@ -222,10 +223,14 @@ def main():
 
         if test_acc > best_acc:
             best_acc = test_acc
+            save_path = os.path.join(os.path.dirname(__file__), 'best_transformer_cifar10.pth')
+            torch.save(model.state_dict(), save_path)
+            print(f'  -> Saved best model ({test_acc:.2f}%)')
 
     elapsed = time.time() - start_time
     print(f'\nTraining complete in {elapsed/60:.1f} minutes')
     print(f'Best Test Accuracy: {best_acc:.2f}%')
+    print(f'Model saved to: {os.path.join(os.path.dirname(__file__), "best_transformer_cifar10.pth")}')
 
 
 if __name__ == '__main__':

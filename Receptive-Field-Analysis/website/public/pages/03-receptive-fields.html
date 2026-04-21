@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>03 · Receptive Fields — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">03 · Receptive Fields</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link active" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 03</div>
+    <h1 class="page-title">Receptive Field Analysis</h1>
+    <p class="page-lead">
+      Theoretical formulas, effective gradient-based ERF maps, Gaussian sigma fitting,
+      and remote sensing implications.
+    </p>
+  </div>
+
+  <!-- Theory -->
+  <section class="section" id="theory">
+    <h2>Theoretical Receptive Field</h2>
+
+    <h3>CNN Formula</h3>
+    <p>For $L$ layers with kernel size $k_i$ and stride $s_i$:</p>
+    <div class="eq-block">$$\text{RF}_L = 1 + \sum_{i=1}^{L}(k_i - 1)\prod_{j=1}^{i-1}s_j$$</div>
+    <p>For our SmallCNN ($k=3$, $s=1$ throughout, $L=4$):</p>
+    <div class="eq-block">$$\text{RF}_4 = 1 + 4 \times (3-1) \times 1 = 9 \text{ px}$$</div>
+
+    <h3>ViT: Global from Layer 1</h3>
+    <p>
+      Self-attention is all-pairs: every patch can attend to every other patch.
+      The theoretical RF is the entire image from the very first attention layer:
+    </p>
+    <div class="eq-block">$$\text{RF}_\text{ViT} = H \times W = 64 \times 64 = 4096 \text{ px}$$</div>
+
+    <h3>Mamba: Linear Causal Growth</h3>
+    <p>
+      The SSM processes the sequence causally. At layer $l$, each token can integrate
+      all prior tokens, but the reach in pixel-space grows with the patch size:
+    </p>
+    <div class="eq-block">$$\text{RF}_\text{Mamba} \approx \min\!\left(L_\text{layers} \times p^2 \times \alpha,\; H \times W\right)$$</div>
+    <p>where $p=4$ is the patch size and $\alpha$ is an empirical growth factor.</p>
+
+    <div class="callout callout-warn">
+      <div class="callout-title">⚠ Remote Sensing Implication</div>
+      A CNN with RF=9 on a 512-pixel image means each neuron sees only
+      $9/512 = 1.76\%$ of the image width. For flood mapping or land-cover
+      classification requiring global context, this is catastrophic.
+    </div>
+  </section>
+
+  <!-- ERF -->
+  <section class="section" id="erf">
+    <h2>Effective Receptive Field (ERF)</h2>
+
+    <p>
+      Luo et al. (2017) showed that the gradient magnitude at the input
+      follows a 2-D Gaussian distribution centred on the output pixel.
+      Pixels far from the centre contribute exponentially less — the
+      <em>effective</em> RF is much smaller than the theoretical RF.
+    </p>
+
+    <h3>Measurement Method</h3>
+    <ol style="margin-left:1.5rem; color:var(--muted); line-height:2; font-size:var(--text-sm)">
+      <li>Create a random input $x \in \mathbb{R}^{1 \times 3 \times 64 \times 64}$</li>
+      <li>Forward pass → get centre-pixel output (or centre token for ViT/Mamba)</li>
+      <li>Backpropagate: $\nabla_x \, \text{output}$</li>
+      <li>ERF $= |\nabla_x|$ summed over channels, normalised to $[0,1]$</li>
+      <li>Fit 2-D Gaussian → report $\sigma$</li>
+    </ol>
+
+    <h3>ERF Heatmaps</h3>
+    <p>Gradient energy maps for all three models (generated from experiment data):</p>
+
+    <div class="heatmap-row">
+      <div class="heatmap-cell">
+        <canvas id="erf-canvas-cnn" width="128" height="128" style="width:100%; image-rendering:pixelated"></canvas>
+        <div class="heatmap-label"><span class="badge badge-cnn">CNN</span> — Local Gaussian</div>
+      </div>
+      <div class="heatmap-cell">
+        <canvas id="erf-canvas-vit" width="128" height="128" style="width:100%; image-rendering:pixelated"></canvas>
+        <div class="heatmap-label"><span class="badge badge-vit">ViT</span> — Distributed</div>
+      </div>
+      <div class="heatmap-cell">
+        <canvas id="erf-canvas-mamba" width="128" height="128" style="width:100%; image-rendering:pixelated"></canvas>
+        <div class="heatmap-label"><span class="badge badge-mamba">Mamba</span> — Causal Strip</div>
+      </div>
+    </div>
+
+    <h3>Comparison Table</h3>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Theoretical RF (px)</th>
+          <th>Effective RF Radius (px)</th>
+          <th>Gaussian σ (px)</th>
+          <th>Coverage %</th>
+        </tr>
+      </thead>
+      <tbody id="rf-table-body">
+        <tr><td colspan="5" style="color:var(--muted); text-align:center">Loading data…</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Implications -->
+  <section class="section" id="implications">
+    <h2>Remote Sensing Implications</h2>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4 class="h4 tag-cnn">CNN</h4>
+        <p class="small muted">
+          RF=9px on a 512px image sees only 1.7% of the scene per neuron.
+          Good for <strong>local texture tasks</strong> (road extraction, building detection)
+          where global context is not required. Fails on land-use classification
+          of large homogeneous regions.
+        </p>
+      </div>
+      <div class="card">
+        <h4 class="h4 tag-vit">ViT</h4>
+        <p class="small muted">
+          Global RF from layer 1 enables <strong>scene-level understanding</strong>.
+          Every patch can directly compare with every other patch.
+          Ideal for global land cover, but expensive ($O(N^2)$) for large tiles.
+        </p>
+      </div>
+      <div class="card">
+        <h4 class="h4 tag-mamba">Mamba</h4>
+        <p class="small muted">
+          Linear causal RF grows with sequence length at $O(N)$ cost.
+          The causal design means <strong>earlier patches in the scan order</strong>
+          have more influence — a potential bias for row-major image processing.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="02-architectures.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Architectures</a>
+    <a href="04-frequency-analysis.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Frequency Analysis →</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

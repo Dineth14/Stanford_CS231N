@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>09 · Failure Modes — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">09 · Failure Modes</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link active" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 09</div>
+    <h1 class="page-title">Failure Modes</h1>
+    <p class="page-lead">Known failure cases for each architecture, with mathematical explanations and remote sensing implications.</p>
+  </div>
+
+  <!-- CNN Failures -->
+  <section class="section" id="cnn-failures">
+    <h2><span class="tag-cnn">CNN</span> Failures</h2>
+
+    <h3>1. Limited Receptive Field → Missing Global Context</h3>
+    <p>
+      Proven: for $L$ layers with kernel $k$ and stride $s=1$, the theoretical RF is at most
+      $1 + L(k-1)$. For $L=4$, $k=3$: $\text{RF}=9$ px. Objects larger than 9 px
+      cannot be recognised by a single neuron — only ensemble effects across spatial positions help.
+    </p>
+    <div class="eq-block">$$\text{RF}_L = 1 + \sum_{i=1}^{L}(k_i-1)\prod_{j&lt;i}s_j \le 1 + L(k-1)$$</div>
+
+    <h3>2. Not Globally Permutation-Equivariant</h3>
+    <p>
+      CNNs are <em>locally</em> translation-equivariant but not globally permutation-equivariant.
+      Cropping or padding an image changes the absolute position of objects relative to
+      the image border — which affects feature map positions and final classification.
+    </p>
+
+    <h3>3. Fixed Filter Banks → Cross-Sensor Failure</h3>
+    <p>
+      CNN filters encode a fixed frequency decomposition. When transferring from optical to SAR
+      (very different spectral statistics), the learned filters may be entirely mismatched.
+      This is why optical-pretrained CNNs fail dramatically on SAR without fine-tuning.
+    </p>
+
+    <h3>4. Aliasing from Strided Convolutions</h3>
+    <p>
+      Strided convolutions without anti-aliasing violate the Nyquist sampling theorem.
+      For a convolution output at stride $s$, frequencies above $f_s / (2s)$ are aliased.
+      Zhang (2019) showed this causes inconsistent classifications under small image shifts.
+    </p>
+  </section>
+
+  <!-- ViT Failures -->
+  <section class="section" id="vit-failures">
+    <h2><span class="tag-vit">ViT</span> Failures</h2>
+
+    <h3>1. Data Hunger</h3>
+    <p>
+      Without strong inductive biases, ViT must learn spatial structure from scratch.
+      Dosovitskiy et al. (2021) showed that ViT-L trained on ImageNet-1K (1.3M images) alone
+      underperforms ResNet — only with JFT-300M (300M images) does ViT win.
+      Remote sensing datasets rarely have &gt;100K labelled examples.
+    </p>
+
+    <h3>2. Quadratic Attention Complexity</h3>
+    <p>
+      For a 512×512 image with patch size 16: $N=1024$ tokens.
+      Attention memory per layer: $N^2 = 1\text{M}$ entries. With 4 heads × 4 layers:
+      $16\text{M}$ attention values. For patch size 8: $N=4096$, attention = $16\text{M}$ per head.
+    </p>
+    <div class="eq-block">$$\text{Memory}_\text{attn} = \mathcal{O}\!\left(\frac{H^2W^2}{p^4}\right)$$</div>
+
+    <h3>3. Uniform Attention at Initialisation</h3>
+    <p>
+      At random initialisation, $Q$ and $K$ are random. The softmax of random dot-products
+      tends to uniform distribution ($1/N$ per token). Formally:
+    </p>
+    <div class="eq-block">$$\lim_{\sigma \to 0} \text{softmax}(QK^\top/\sqrt{d}) = \frac{1}{N}\mathbf{1}\mathbf{1}^\top$$</div>
+    <p>
+      This means ViT starts as a simple <em>mean pooling</em> — no spatial structure.
+      The model must learn attention patterns entirely from gradients, explaining slow convergence.
+    </p>
+
+    <h3>4. Positional Encoding Breaks Under Size Changes</h3>
+    <p>
+      Learnable positional embeddings are defined for a fixed sequence length $N$.
+      At inference with a different image size, the embeddings must be interpolated
+      (bicubic) — introducing errors proportional to the size difference.
+      Remote sensing inference on tiles of varying sizes requires careful handling.
+    </p>
+  </section>
+
+  <!-- Mamba Failures -->
+  <section class="section" id="mamba-failures">
+    <h2><span class="tag-mamba">Mamba</span> Failures</h2>
+
+    <h3>1. Causal Design — 2D Spatial Reasoning Difficulty</h3>
+    <p>
+      Mamba was designed for causal 1-D sequences (text, audio). In row-major 2D unrolling,
+      the token at position $(i, j)$ can only attend to tokens $(0,0), \ldots, (i,j-1)$
+      from previous rows and columns. Pixels in the same column $j$ but different rows
+      are separated by $W$ tokens — breaking vertical spatial locality.
+    </p>
+
+    <h3>2. Row-Major Scan Loses Vertical Relationships</h3>
+    <p>
+      For an image of width $W=64$: pixel $(y, x)$ and $(y+1, x)$ are 64 tokens apart in
+      the sequence. For $W=512$: 512 tokens apart. The SSM's ability to remember
+      vertical neighbours degrades linearly with image width.
+    </p>
+
+    <h3>3. No Global Attention</h3>
+    <p>
+      Unlike ViT, Mamba cannot directly compare non-adjacent tokens in the scan order.
+      Token $(0,0)$ and token $(N-1, N-1)$ interact only through the hidden state path
+      of length $N$ — with exponential decay controlled by $\bar{A}$.
+    </p>
+
+    <h3>4. Numerical Instability Near Unit Circle</h3>
+    <p>
+      If any eigenvalue of $\bar{A}$ approaches 1 (i.e., $\Delta a_i \approx 0$),
+      the hidden state grows unboundedly — analogous to a marginally stable system.
+      The $\text{softplus}$ activation on $\Delta$ prevents exact zero but doesn't
+      preclude near-instability with poor initialisation.
+    </p>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="08-mathematical-theory.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Mathematical Theory</a>
+    <a href="10-comparison.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Head-to-Head →</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

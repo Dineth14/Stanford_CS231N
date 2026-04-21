@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>11 · Conclusion — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">11 · Conclusion</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link active" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 11</div>
+    <h1 class="page-title">Conclusion</h1>
+    <p class="page-lead">Key takeaways, open questions, complete reference list with BibTeX export.</p>
+  </div>
+
+  <section class="section" id="takeaways">
+    <h2>Key Takeaways</h2>
+
+    <div class="callout callout-success">
+      <div class="callout-title">Finding 1: CNN RF is Severely Limited</div>
+      With 4 layers and kernel size 3, the theoretical RF is just 9 px.
+      Effective RF (gradient backprop) is even smaller. This makes CNN fundamentally
+      unsuitable for tasks requiring global context, such as flood mapping or land-use classification.
+    </div>
+
+    <div class="callout callout-success">
+      <div class="callout-title">Finding 2: ViT Achieves Global RF at Cost of Quadratic Complexity</div>
+      Every ViT layer has a global RF — even layer 1. However, this comes with $O(N^2)$ memory.
+      For remote sensing at high resolution ($1024^2$ with patch 16: $N=4096$), a single
+      attention layer requires 64M attention values per head — prohibitive on most hardware.
+    </div>
+
+    <div class="callout callout-success">
+      <div class="callout-title">Finding 3: Mamba Bridges the Gap</div>
+      Mamba achieves $O(N)$ complexity with causal global context. The IIR filter structure
+      provides richer frequency response than CNN's FIR. The HiPPO-inspired initialisation
+      gives diverse memory timescales. The main limitation is the causal 1D scan, which
+      breaks 2D spatial symmetry.
+    </div>
+
+    <div class="callout callout-success">
+      <div class="callout-title">Finding 4: Architecture Choice Should Be Task-Driven</div>
+      No single architecture dominates across all remote sensing tasks.
+      CNN for data-efficient, texture-based tasks (SAR, road extraction).
+      ViT when global context matters and data is abundant or pretraining is available.
+      Mamba for sequential/spectral data or high-resolution inference.
+    </div>
+
+    <div class="callout callout-success">
+      <div class="callout-title">Finding 5: All Architectures are Instances of a Unified SSM</div>
+      CNN = FIR SSM (time-invariant, finite filter).
+      Mamba = IIR SSM (time-varying via selectivity, infinite filter).
+      ViT = data-adaptive non-parametric kernel regression.
+      The SSM lens reveals why Mamba has strictly more expressive power than CNN in the frequency domain.
+    </div>
+  </section>
+
+  <section class="section" id="open-questions">
+    <h2>Open Questions</h2>
+    <ul>
+      <li>Can a bidirectional Mamba scan (Vim: Zhu et al. 2024) recover the 2D symmetry needed for remote sensing?</li>
+      <li>How do ERF shapes change with dilation, depth-wise convolutions, or dilated Mamba state matrices?</li>
+      <li>Does the low-pass bias of Mamba help or hurt in high-frequency SAR speckle interpretation?</li>
+      <li>Can we design a hybrid architecture with CNN's local texture, ViT's global attention, and Mamba's linear complexity?</li>
+    </ul>
+  </section>
+
+  <section class="section" id="references">
+    <h2>References</h2>
+    <ol class="references-list">
+      <li id="ref-lecun1989">
+        LeCun, Y., Boser, B., Denker, J. S., Henderson, D., Howard, R. E., Hubbard, W., &amp; Jackel, L. D. (1989).
+        <em>Backpropagation applied to handwritten zip code recognition.</em>
+        Neural computation, 1(4), 541–551.
+      </li>
+      <li id="ref-vaswani2017">
+        Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... &amp; Polosukhin, I. (2017).
+        <em>Attention is all you need.</em>
+        Advances in neural information processing systems, 30.
+      </li>
+      <li id="ref-dosovitskiy2021">
+        Dosovitskiy, A., Beyer, L., Kolesnikov, A., Weissenborn, D., Zhai, X., Unterthiner, T., ... &amp; Houlsby, N. (2021).
+        <em>An image is worth 16x16 words: Transformers for image recognition at scale.</em>
+        ICLR 2021.
+      </li>
+      <li id="ref-gu2022">
+        Gu, A., &amp; Dao, T. (2023).
+        <em>Mamba: Linear-time sequence modeling with selective state spaces.</em>
+        arXiv preprint arXiv:2312.00752.
+      </li>
+      <li id="ref-luo2017">
+        Luo, W., Li, Y., Urtasun, R., &amp; Zemel, R. (2016).
+        <em>Understanding the effective receptive field in deep convolutional neural networks.</em>
+        Advances in neural information processing systems, 29.
+      </li>
+      <li id="ref-park2022">
+        Park, N., &amp; Kim, S. (2022).
+        <em>How do vision transformers work?</em>
+        ICLR 2022.
+      </li>
+      <li id="ref-gu2020">
+        Gu, A., Dao, T., Ermon, S., Rudra, A., &amp; Re, C. (2020).
+        <em>HiPPO: Recurrent memory with optimal polynomial projections.</em>
+        Advances in neural information processing systems, 33.
+      </li>
+      <li id="ref-zhang2019">
+        Zhang, R. (2019).
+        <em>Making convolutional networks shift-invariant again.</em>
+        ICML 2019.
+      </li>
+    </ol>
+
+    <h3>BibTeX Export</h3>
+    <pre class="code-block" id="bibtex-block">@article{lecun1989backpropagation,
+  title={Backpropagation applied to handwritten zip code recognition},
+  author={LeCun, Yann and others},
+  journal={Neural computation},
+  year={1989}
+}
+
+@inproceedings{vaswani2017attention,
+  title={Attention is all you need},
+  author={Vaswani, Ashish and others},
+  booktitle={NeurIPS},
+  year={2017}
+}
+
+@inproceedings{dosovitskiy2021image,
+  title={An image is worth 16x16 words},
+  author={Dosovitskiy, Alexey and others},
+  booktitle={ICLR},
+  year={2021}
+}
+
+@article{gu2023mamba,
+  title={Mamba: Linear-time sequence modeling with selective state spaces},
+  author={Gu, Albert and Dao, Tri},
+  journal={arXiv:2312.00752},
+  year={2023}
+}
+
+@inproceedings{luo2016understanding,
+  title={Understanding the effective receptive field in deep CNNs},
+  author={Luo, Wenjie and others},
+  booktitle={NeurIPS},
+  year={2016}
+}
+
+@inproceedings{park2022how,
+  title={How do vision transformers work?},
+  author={Park, Namuk and Kim, Songkuk},
+  booktitle={ICLR},
+  year={2022}
+}
+
+@inproceedings{gu2020hippo,
+  title={HiPPO: Recurrent memory with optimal polynomial projections},
+  author={Gu, Albert and others},
+  booktitle={NeurIPS},
+  year={2020}
+}
+
+@inproceedings{zhang2019making,
+  title={Making convolutional networks shift-invariant again},
+  author={Zhang, Richard},
+  booktitle={ICML},
+  year={2019}
+}</pre>
+    <button class="btn-copy" onclick="copyBibtex()">Copy BibTeX</button>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="10-comparison.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Head-to-Head</a>
+    <a href="../index.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">↩ Back to Home</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+<script>
+function copyBibtex() {
+  const text = document.getElementById('bibtex-block').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy BibTeX', 2000);
+  });
+}
+</script>
+</body>
+</html>

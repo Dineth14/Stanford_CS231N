@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>07 · Remote Sensing — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">07 · Remote Sensing</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link active" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 07</div>
+    <h1 class="page-title">Remote Sensing Applications</h1>
+    <p class="page-lead">Which architecture to use for each task, and exactly why — backed by the receptive field and frequency analysis.</p>
+  </div>
+
+  <section class="section" id="matrix">
+    <h2>Application Matrix</h2>
+    <p>Suitability scores (1–5) based on RF, frequency response, and complexity analysis.</p>
+
+    <div class="app-matrix">
+      <div class="app-matrix-header">Task</div>
+      <div class="app-matrix-header" style="color:var(--green)">CNN</div>
+      <div class="app-matrix-header" style="color:var(--amber)">ViT</div>
+      <div class="app-matrix-header" style="color:var(--pink)">Mamba</div>
+
+      <div class="app-matrix-task">Land Use Classification</div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+      <div class="app-matrix-cell"><span class="score-5">5</span></div>
+      <div class="app-matrix-cell"><span class="score-4">4</span></div>
+
+      <div class="app-matrix-task">Object Detection</div>
+      <div class="app-matrix-cell"><span class="score-5">5</span></div>
+      <div class="app-matrix-cell"><span class="score-4">4</span></div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+
+      <div class="app-matrix-task">Change Detection</div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+      <div class="app-matrix-cell"><span class="score-4">4</span></div>
+      <div class="app-matrix-cell"><span class="score-4">4</span></div>
+
+      <div class="app-matrix-task">Road Extraction</div>
+      <div class="app-matrix-cell"><span class="score-5">5</span></div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+
+      <div class="app-matrix-task">Building Segmentation</div>
+      <div class="app-matrix-cell"><span class="score-5">5</span></div>
+      <div class="app-matrix-cell"><span class="score-4">4</span></div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+
+      <div class="app-matrix-task">SAR Interpretation</div>
+      <div class="app-matrix-cell"><span class="score-5">5</span></div>
+      <div class="app-matrix-cell"><span class="score-2">2</span></div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+
+      <div class="app-matrix-task">Hyperspectral Unmixing</div>
+      <div class="app-matrix-cell"><span class="score-2">2</span></div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+      <div class="app-matrix-cell"><span class="score-5">5</span></div>
+
+      <div class="app-matrix-task">Super-Resolution</div>
+      <div class="app-matrix-cell"><span class="score-5">5</span></div>
+      <div class="app-matrix-cell"><span class="score-4">4</span></div>
+      <div class="app-matrix-cell"><span class="score-3">3</span></div>
+    </div>
+  </section>
+
+  <section class="section" id="case-studies">
+    <h2>Case Studies</h2>
+
+    <h3>Case Study 1: ViT Fails on SAR Without Pretraining</h3>
+    <div class="callout callout-warn">
+      <div class="callout-title">⚠ The SAR Generalisation Gap</div>
+      SAR imagery is dominated by speckle noise (high-frequency multiplicative noise).
+      ViT, with no locality prior, attends uniformly at initialisation.
+      Without ImageNet pretraining, it cannot learn the high-frequency speckle statistics
+      of SAR — it needs far more data. CNN's inherent high-frequency sensitivity (texture bias)
+      means it can learn SAR statistics from relatively small datasets.
+    </div>
+
+    <h3>Case Study 2: CNN Fails on Large-Area Flood Mapping</h3>
+    <div class="callout callout-warn">
+      <div class="callout-title">⚠ The Receptive Field Bottleneck</div>
+      Flood extents span thousands of pixels. A CNN with RF=9 on a 1024×1024 image
+      sees 0.9% of the scene per neuron. It can detect water locally (correct spectral signature)
+      but cannot integrate global context to understand flood extent or connectivity.
+      ViT or Mamba's long-range dependencies are essential here.
+    </div>
+
+    <h3>Case Study 3: Mamba for Hyperspectral Sequences</h3>
+    <div class="callout callout-success">
+      <div class="callout-title">✓ The Spectral Sequence Advantage</div>
+      Hyperspectral images have 100–400 spectral bands that must be jointly interpreted.
+      Treating bands as a sequence (L=200 tokens) exploits Mamba's linear $O(N)$ complexity
+      and the SSM's natural long-range memory. The IIR filter structure is particularly
+      suited to the smooth spectral correlations in hyperspectral data.
+    </div>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="06-training-dynamics.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Training Dynamics</a>
+    <a href="08-mathematical-theory.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Mathematical Theory →</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

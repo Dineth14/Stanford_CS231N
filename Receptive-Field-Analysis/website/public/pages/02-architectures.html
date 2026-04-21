@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>02 · Architectures — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">02 · Architectures</span>
+</header>
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link active" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+  <div class="page-header">
+    <div class="page-eyebrow">Section 02</div>
+    <h1 class="page-title">Architecture Deep Dive</h1>
+    <p class="page-lead">Mathematical definitions, inductive biases, and design decisions for CNN, ViT, and Mamba.</p>
+  </div>
+
+  <!-- ── CNN ─────────────────────────────────────────────────────────── -->
+  <section class="section" id="cnn">
+    <h2><span class="tag-cnn">CNN</span> — Convolutional Neural Network</h2>
+
+    <h3>Definition</h3>
+    <p>
+      A 2-D convolution computes a sliding dot product between a learnable filter $g$ and
+      the input feature map $f$:
+    </p>
+    <div class="eq-block">
+      <div class="eq-label">2D Discrete Convolution</div>
+      $$(f * g)[m, n] = \sum_{k_1}\sum_{k_2} f[k_1, k_2]\, g[m - k_1,\, n - k_2]$$
+    </div>
+
+    <h3>Inductive Biases</h3>
+    <ul style="margin-left:1.5rem; color:var(--muted); line-height:2; font-size:var(--text-sm)">
+      <li><strong>Locality</strong>: each neuron sees only a small neighbourhood (kernel size k)</li>
+      <li><strong>Translation equivariance</strong>: shifting the input shifts the output by the same amount</li>
+      <li><strong>Weight sharing</strong>: the same filter is applied at every spatial position</li>
+    </ul>
+
+    <h3>Weight Sharing — Parameter Count</h3>
+    <p>For a single conv layer with $C_{in}$ input channels, $C_{out}$ output channels, kernel $k$:</p>
+    <div class="eq-block">$$P_l = C_{in} \cdot C_{out} \cdot k^2 + C_{out} \quad \text{(bias)}$$</div>
+    <p>Total for our 4-layer CNN:</p>
+    <div class="eq-block">$$P = \sum_{l=1}^{4} C_{l-1} \cdot C_l \cdot 9 = 3\!\cdot\!32\!\cdot\!9 + 32\!\cdot\!64\!\cdot\!9 + 64\!\cdot\!128\!\cdot\!9 + 128\!\cdot\!256\!\cdot\!9 \approx 385\text{K}$$</div>
+
+    <h3>Convolution = Frequency Filtering</h3>
+    <p>
+      By the convolution theorem, convolution in the spatial domain is element-wise
+      multiplication in the frequency domain:
+    </p>
+    <div class="eq-block">$$\mathcal{F}[f * g] = \mathcal{F}[f] \cdot \mathcal{F}[g]$$</div>
+    <p>
+      Each convolutional filter acts as a <em>bandpass filter</em>. Learned filters
+      in early layers typically capture low-frequency structure (edges, blobs);
+      deeper layers capture higher-frequency texture details. This is not a design
+      choice — it emerges naturally from gradient descent on natural image statistics.
+    </p>
+
+    <h3>Our Implementation: SmallCNN</h3>
+    <pre><code class="language-python">class SmallCNN(nn.Module):
+    # 4 conv layers, no downsampling (stride=1, padding=1)
+    # Channels: 3 → 32 → 64 → 128 → 256
+    # Each layer: Conv2d → BatchNorm → ReLU
+    # Spatial dims: 64×64 throughout (for full RF measurement)
+    # Output: GlobalAvgPool → Linear(256, 10)</code></pre>
+  </section>
+
+  <!-- ── ViT ─────────────────────────────────────────────────────────── -->
+  <section class="section" id="vit">
+    <h2><span class="tag-vit">ViT</span> — Vision Transformer</h2>
+
+    <h3>Patch Tokenisation</h3>
+    <p>
+      An image of size $H \times W$ is divided into non-overlapping patches of size $p \times p$.
+      Each patch is linearly projected to an embedding of dimension $d$:
+    </p>
+    <div class="eq-block">$$N = \frac{H}{p} \cdot \frac{W}{p}, \quad \mathbf{z}_0 = [\mathbf{x}_\text{cls}; \mathbf{E}\mathbf{x}_1; \ldots; \mathbf{E}\mathbf{x}_N] + \mathbf{E}_\text{pos}$$</div>
+    <p>For our model: $p=8$, $H=W=64$ → $N=64$ patches, $d=128$.</p>
+
+    <h3>Self-Attention</h3>
+    <div class="eq-block">
+      <div class="eq-label">Multi-Head Self-Attention</div>
+      $$\text{Attn}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
+    </div>
+    <p>
+      Crucially, attention computes all-pairs interactions. Token $i$ can directly
+      attend to token $j$ regardless of their spatial distance. This gives <strong>global
+      receptive field from layer 1</strong> — the opposite of CNN's local inductive bias.
+    </p>
+
+    <h3>Why ViT Has No Spatial Prior</h3>
+    <p>
+      Attention is <em>permutation-equivariant</em>: shuffle the tokens and
+      the output shuffles the same way (because the softmax depends only on dot-products).
+      The model must <em>learn</em> spatial structure from positional embeddings and data.
+      Without them: the model treats the image as a bag of patches.
+    </p>
+
+    <h3>Quadratic Complexity</h3>
+    <div class="eq-block">$$\mathcal{O}(N^2 d) \quad \text{per attention layer}$$</div>
+    <p>
+      For a 512×512 image with patch size 16: $N = 1024$ tokens.
+      Attention matrix = $1024^2 = 1\text{M}$ entries per head per layer.
+      This makes ViT <strong>prohibitively expensive</strong> for large remote sensing images
+      without windowing or linear approximation.
+    </p>
+
+    <h3>Positional Encoding</h3>
+    <p>
+      Our model uses <em>learnable</em> 1-D positional embeddings. Alternatives include:
+      sinusoidal, 2-D factored, RoPE (Rotary Position Embedding), and ALiBi.
+      All break under image-size changes at inference — a critical limitation for
+      remote sensing where tile sizes vary.
+    </p>
+  </section>
+
+  <!-- ── Mamba ──────────────────────────────────────────────────────── -->
+  <section class="section" id="mamba">
+    <h2><span class="tag-mamba">Mamba</span> — State Space Model</h2>
+
+    <h3>Continuous-Time SSM</h3>
+    <p>A linear time-invariant system is described by:</p>
+    <div class="eq-block">
+      <div class="eq-label">Continuous-Time SSM</div>
+      $$\dot{h}(t) = Ah(t) + Bu(t), \qquad y(t) = Ch(t) + Du(t)$$
+    </div>
+    <p>where $h(t) \in \mathbb{R}^N$ is the hidden state, $u(t)$ is the input, $y(t)$ is the output.</p>
+
+    <h3>Discretisation — Zero-Order Hold</h3>
+    <p>For a discrete sequence with time step $\Delta$:</p>
+    <div class="eq-block">
+      $$\bar{A} = e^{\Delta A}, \qquad \bar{B} = (\Delta A)^{-1}(e^{\Delta A} - I)\Delta B$$
+      $$h_t = \bar{A} h_{t-1} + \bar{B} u_t, \qquad y_t = Ch_t + Du_t$$
+    </div>
+    <p>
+      For a <em>diagonal</em> $A$ (as in our implementation), the matrix exponential
+      is element-wise: $(\bar{A})_{ii} = e^{\Delta a_i}$, which is computationally efficient.
+    </p>
+
+    <h3>HiPPO Matrix Initialisation</h3>
+    <p>
+      Gu et al. (2020) showed that initialising $A$ as the <em>HiPPO</em> matrix —
+      derived from Legendre polynomial optimal projection — allows the SSM to
+      faithfully memorise the entire input history. Our simplified implementation uses
+      <em>log-spaced</em> eigenvalues (a diagonal approximation):
+    </p>
+    <div class="eq-block">$$A_{ii} = -e^{\log(i+1)}, \quad i = 0,\ldots,N-1$$</div>
+    <p>
+      The negative real eigenvalues ensure stability ($\bar{A}_{ii} \in (0,1)$).
+      Larger eigenvalues (near 0) decay fast → encode recent history.
+      Smaller eigenvalues (near 1) decay slowly → encode distant history.
+    </p>
+
+    <h3>Selective Scan (Mamba's Key Innovation)</h3>
+    <p>
+      In S4, $A, B, C$ are input-independent (time-invariant).
+      Mamba makes $B$, $C$, and $\Delta$ input-dependent:
+    </p>
+    <div class="eq-block">
+      $$B_t = \text{Linear}(x_t), \quad C_t = \text{Linear}(x_t), \quad \Delta_t = \text{softplus}(\text{Linear}(x_t))$$
+    </div>
+    <p>
+      This allows the model to <em>selectively</em> remember or forget based on content —
+      analogous to gating in LSTMs, but more principled.
+    </p>
+
+    <h3>Linear Complexity</h3>
+    <div class="eq-block">$$\mathcal{O}(N \cdot d \cdot N_\text{state})$$</div>
+    <p>
+      Unlike ViT's $\mathcal{O}(N^2)$, SSM complexity grows <em>linearly</em> with sequence length.
+      For hyperspectral images (hundreds of bands as a sequence) or large image tiles,
+      this is a critical advantage.
+    </p>
+
+    <h3>2D Images → 1D Sequences</h3>
+    <p>
+      Mamba is inherently 1-D causal. For images, common strategies are:
+    </p>
+    <ul style="margin-left:1.5rem; color:var(--muted); line-height:2; font-size:var(--text-sm)">
+      <li><strong>Row-major</strong>: flatten H×W → L tokens (simple, loses 2D structure)</li>
+      <li><strong>Hilbert curve</strong>: space-filling curve preserving locality better</li>
+      <li><strong>Bidirectional</strong>: process left→right and right→left, concatenate</li>
+      <li><strong>VMamba</strong>: 4-directional scan (VSS block)</li>
+    </ul>
+    <p>Our implementation uses 4×4 patch embedding → 16×16 = 256 token sequence (row-major).</p>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="01-introduction.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Introduction</a>
+    <a href="03-receptive-fields.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Receptive Fields →</a>
+  </div>
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>

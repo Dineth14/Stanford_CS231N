@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RF & Frequency Analysis — CNN vs ViT vs Mamba</title>
+  <meta name="description" content="Publication-quality analysis of receptive fields and frequency response across CNN, Vision Transformer, and Mamba architectures for remote sensing."/>
+  <link rel="stylesheet" href="css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"/>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<div class="layout">
+
+<!-- ── Site Header ─────────────────────────────────────────────────────── -->
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation">
+    <span></span><span></span><span></span>
+  </button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">CNN · ViT · Mamba · Remote Sensing</span>
+</header>
+
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="index.html"><span class="nav-num">00</span>Home</a>
+
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link" href="pages/01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="pages/02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="pages/03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="pages/04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="pages/05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="pages/06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="pages/07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="pages/08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="pages/09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="pages/10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="pages/11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<!-- ── Main Content ────────────────────────────────────────────────────── -->
+<main class="content">
+
+  <div class="page-header">
+    <div class="page-eyebrow">Stanford CS231N · Research Analysis</div>
+    <h1 class="page-title">Receptive Fields &amp;<br>Frequency Response</h1>
+    <p class="page-lead">
+      A rigorous comparison of how CNN, Vision Transformer, and Mamba architectures
+      perceive spatial structure — critical for remote sensing applications.
+    </p>
+  </div>
+
+  <!-- Quick-glance comparison table -->
+  <section class="section">
+    <h2>Quick Comparison</h2>
+    <p>Key metrics across all three architectures at a glance. Run
+      <code>python experiments/run_all.py</code> to populate with real values.</p>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th class="col-cnn">CNN</th>
+          <th class="col-vit">ViT</th>
+          <th class="col-mamba">Mamba</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="row-label">Theoretical RF (px)</td>
+          <td id="td-cnn-rf" class="mono">—</td>
+          <td id="td-vit-rf" class="mono">—</td>
+          <td id="td-mamba-rf" class="mono">—</td>
+        </tr>
+        <tr>
+          <td class="row-label">Effective RF Radius (px)</td>
+          <td id="td-cnn-erf" class="mono">—</td>
+          <td id="td-vit-erf" class="mono">—</td>
+          <td id="td-mamba-erf" class="mono">—</td>
+        </tr>
+        <tr>
+          <td class="row-label">Total Parameters</td>
+          <td id="td-cnn-params" class="mono">—</td>
+          <td id="td-vit-params" class="mono">—</td>
+          <td id="td-mamba-params" class="mono">—</td>
+        </tr>
+        <tr>
+          <td class="row-label">Inference Time</td>
+          <td id="td-cnn-ms" class="mono">—</td>
+          <td id="td-vit-ms" class="mono">—</td>
+          <td id="td-mamba-ms" class="mono">—</td>
+        </tr>
+        <tr>
+          <td class="row-label">Frequency Bias</td>
+          <td id="td-cnn-bias" class="mono">—</td>
+          <td id="td-vit-bias" class="mono">—</td>
+          <td id="td-mamba-bias" class="mono">—</td>
+        </tr>
+        <tr>
+          <td class="row-label">Final Training Loss</td>
+          <td id="td-cnn-loss" class="mono">—</td>
+          <td id="td-vit-loss" class="mono">—</td>
+          <td id="td-mamba-loss" class="mono">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Navigation cards -->
+  <section class="section">
+    <h2>Explore the Analysis</h2>
+    <div class="card-grid">
+      <a href="pages/01-introduction.html" style="text-decoration:none">
+        <div class="card">
+          <div class="page-eyebrow">01</div>
+          <h3 class="h3" style="margin-top:0.5rem">Introduction</h3>
+          <p class="muted small">Research goals, remote sensing challenges, why architecture choice is critical.</p>
+        </div>
+      </a>
+      <a href="pages/02-architectures.html" style="text-decoration:none">
+        <div class="card">
+          <div class="page-eyebrow">02</div>
+          <h3 class="h3" style="margin-top:0.5rem">Architectures</h3>
+          <p class="muted small">Deep-dive into CNN, ViT, and Mamba mathematical definitions and inductive biases.</p>
+        </div>
+      </a>
+      <a href="pages/03-receptive-fields.html" style="text-decoration:none">
+        <div class="card">
+          <div class="page-eyebrow">03</div>
+          <h3 class="h3" style="margin-top:0.5rem">Receptive Fields</h3>
+          <p class="muted small">ERF heatmaps, theoretical vs effective RF, Gaussian sigma analysis.</p>
+        </div>
+      </a>
+      <a href="pages/04-frequency-analysis.html" style="text-decoration:none">
+        <div class="card">
+          <div class="page-eyebrow">04</div>
+          <h3 class="h3" style="margin-top:0.5rem">Frequency Analysis</h3>
+          <p class="muted small">Fourier response curves, 2D spectral heatmaps, high vs low frequency bias.</p>
+        </div>
+      </a>
+      <a href="pages/08-mathematical-theory.html" style="text-decoration:none">
+        <div class="card">
+          <div class="page-eyebrow">08</div>
+          <h3 class="h3" style="margin-top:0.5rem">Mathematical Theory</h3>
+          <p class="muted small">SSM discretization, HiPPO matrix, attention as kernel regression, unified framework.</p>
+        </div>
+      </a>
+      <a href="pages/10-comparison.html" style="text-decoration:none">
+        <div class="card">
+          <div class="page-eyebrow">10</div>
+          <h3 class="h3" style="margin-top:0.5rem">Head-to-Head</h3>
+          <p class="muted small">Spider chart, decision flowchart, which model to use when.</p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  RF &amp; Frequency Analysis · Stanford CS231N · 2024 ·
+  <a href="https://github.com" style="color:var(--cyan)">GitHub</a>
+</footer>
+
+</div><!-- .layout -->
+
+<!-- ── Scripts ─────────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

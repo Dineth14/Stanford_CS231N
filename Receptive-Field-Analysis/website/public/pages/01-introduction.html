@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>01 · Introduction — RF & Frequency Analysis</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"/>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div class="layout">
+
+<header class="site-header">
+  <button class="hamburger" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+  <span class="logo">[RF-ANALYSIS]</span>
+  <span class="title">Receptive Fields &amp; Frequency Response</span>
+  <span class="subtitle">01 · Introduction</span>
+</header>
+
+<nav class="sidebar">
+  <div class="nav-section-label">Overview</div>
+  <a class="nav-link" href="../index.html"><span class="nav-num">00</span>Home</a>
+  <div class="nav-section-label">Analysis</div>
+  <a class="nav-link active" href="01-introduction.html"><span class="nav-num">01</span>Introduction</a>
+  <a class="nav-link" href="02-architectures.html"><span class="nav-num">02</span>Architectures</a>
+  <a class="nav-link" href="03-receptive-fields.html"><span class="nav-num">03</span>Receptive Fields</a>
+  <a class="nav-link" href="04-frequency-analysis.html"><span class="nav-num">04</span>Frequency Analysis</a>
+  <a class="nav-link" href="05-model-parameters.html"><span class="nav-num">05</span>Model Parameters</a>
+  <a class="nav-link" href="06-training-dynamics.html"><span class="nav-num">06</span>Training Dynamics</a>
+  <div class="nav-section-label">Applications</div>
+  <a class="nav-link" href="07-remote-sensing.html"><span class="nav-num">07</span>Remote Sensing</a>
+  <a class="nav-link" href="08-mathematical-theory.html"><span class="nav-num">08</span>Mathematical Theory</a>
+  <a class="nav-link" href="09-failure-modes.html"><span class="nav-num">09</span>Failure Modes</a>
+  <a class="nav-link" href="10-comparison.html"><span class="nav-num">10</span>Head-to-Head</a>
+  <a class="nav-link" href="11-conclusion.html"><span class="nav-num">11</span>Conclusion</a>
+</nav>
+<div class="sidebar-overlay"></div>
+
+<main class="content">
+
+  <div class="page-header">
+    <div class="page-eyebrow">Section 01</div>
+    <h1 class="page-title">Introduction &amp; Motivation</h1>
+    <p class="page-lead">
+      Why receptive fields and frequency response determine whether a deep learning model
+      succeeds or fails in remote sensing — and why the right architecture choice is non-trivial.
+    </p>
+  </div>
+
+  <!-- 1.1 What are Receptive Fields? -->
+  <section class="section" id="what-are-rf">
+    <h2>What Are Receptive Fields?</h2>
+    <p>
+      The <strong>receptive field</strong> of a neuron in a deep network is the region of the input
+      image that can influence its activation. For a single convolutional neuron three layers deep
+      (kernel=3, stride=1), the theoretical RF is $\text{RF} = 1 + 3 \times (3-1) = 7$ pixels.
+      This is a tiny window into a scene.
+    </p>
+    <p>
+      But receptive fields come in two flavours that are very different in practice:
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <h4 class="h4">Theoretical RF</h4>
+        <p class="muted small">
+          The maximum region geometrically reachable by backpropagation through the
+          network topology. Calculated from kernel sizes and strides.
+          Formula: $\text{RF}_L = 1 + \sum_{i=1}^{L}(k_i-1)\prod_{j&lt;i}s_j$
+        </p>
+      </div>
+      <div class="card">
+        <h4 class="h4">Effective RF (ERF)</h4>
+        <p class="muted small">
+          The region that <em>actually</em> influences the output, measured by input gradients.
+          Luo et al. (2017) showed that ERF follows a Gaussian distribution — pixels far from
+          the centre contribute negligibly despite being in the theoretical RF.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1.2 Remote Sensing Challenges -->
+  <section class="section" id="rs-challenges">
+    <h2>Remote Sensing Challenges</h2>
+    <p>Remote sensing images are fundamentally different from natural images:</p>
+
+    <h3>Multi-Scale Objects</h3>
+    <p>
+      A single aerial image may contain buildings (10–50 m), roads (5–20 m wide),
+      forests (hectares to km²), and entire river systems — spanning 3–4 orders of magnitude
+      in spatial scale. A model whose RF is fixed at 9 pixels cannot reason about
+      a 500-pixel lake.
+    </p>
+
+    <h3>Spectral Diversity</h3>
+    <p>
+      Remote sensing sensors capture beyond the visible spectrum: near-infrared (NIR),
+      shortwave infrared (SWIR), synthetic aperture radar (SAR), and hyperspectral
+      (100+ bands). The frequency content and spatial statistics differ drastically
+      between modalities:
+    </p>
+    <ul style="margin-left:1.5rem; margin-bottom:1rem; color:var(--muted); font-size:var(--text-sm)">
+      <li><strong>SAR</strong>: dominated by speckle noise (high spatial frequencies)</li>
+      <li><strong>Multispectral</strong>: smooth gradients, sharp boundaries (mixed frequencies)</li>
+      <li><strong>Hyperspectral</strong>: highly correlated spectral bands, structured spectral sequences</li>
+    </ul>
+
+    <h3>Large Image Tiles</h3>
+    <p>
+      Remote sensing images are typically 512×512 to 4096×4096 pixels per tile.
+      A CNN with $\text{RF}=9$ on a 512-pixel image sees only
+      $(9/512)^2 = 0.03\%$ of the scene per neuron — catastrophic for
+      land-use classification that requires global context.
+    </p>
+
+    <div class="callout callout-warn">
+      <div class="callout-title">⚠ Scale Mismatch Problem</div>
+      A 4-layer CNN with kernel=3, stride=1 has theoretical RF = 9 px.
+      On a 512×512 remote sensing image, this is 1.76% of the scene width.
+      No amount of training will compensate for a blind spot this large.
+    </div>
+  </section>
+
+  <!-- 1.3 Research Questions -->
+  <section class="section" id="research-questions">
+    <h2>Research Questions</h2>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="page-eyebrow">Q1</div>
+        <p>How does the <strong>effective receptive field</strong> differ between CNN, ViT, and Mamba,
+        and how does it compare to the theoretical RF?</p>
+      </div>
+      <div class="card">
+        <div class="page-eyebrow">Q2</div>
+        <p>What <strong>spatial frequency bands</strong> does each architecture naturally amplify or suppress
+        when processing visual features?</p>
+      </div>
+      <div class="card">
+        <div class="page-eyebrow">Q3</div>
+        <p>How do parameter count, FLOPs, and inference time scale, and what are the
+        <strong>efficiency trade-offs</strong> for remote sensing deployment?</p>
+      </div>
+      <div class="card">
+        <div class="page-eyebrow">Q4</div>
+        <p>Which architecture is best suited for each remote sensing task, and
+        when should you <strong>ensemble or switch</strong> architectures?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1.4 About this analysis -->
+  <section class="section" id="about">
+    <h2>About This Analysis</h2>
+    <p>
+      We implement three 4-layer models in PyTorch from scratch — SmallCNN, SmallViT, SmallMamba —
+      trained on a toy 10-class dataset and analysed with two complementary methods:
+    </p>
+    <ol style="margin-left:1.5rem; color:var(--muted); font-size:var(--text-sm); line-height:2">
+      <li><strong>Gradient-based ERF</strong>: Backpropagate from centre pixel → |grad| map</li>
+      <li><strong>Fourier frequency analysis</strong>: FFT of features for sinusoidal grating inputs</li>
+    </ol>
+    <p>
+      All models run on CPU without any GPU requirement, completing all experiments in under 10 minutes.
+    </p>
+
+    <div class="callout callout-info">
+      <div class="callout-title">ℹ️ How to Read This Site</div>
+      Navigate through sections 01–11 for a progressive deep-dive. Section 08 contains
+      the full mathematical derivations. Section 10 has the head-to-head comparison chart.
+      All charts populate automatically once you run
+      <code>python experiments/run_all.py</code>.
+    </div>
+  </section>
+
+  <div style="display:flex; gap:1rem; margin-top:2rem">
+    <a href="../index.html" class="nav-link" style="border:1px solid var(--border); border-radius:8px; padding:0.5rem 1rem">← Home</a>
+    <a href="02-architectures.html" class="nav-link" style="border:1px solid var(--cyan); border-radius:8px; padding:0.5rem 1rem; color:var(--cyan)">Next: Architectures →</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">RF &amp; Frequency Analysis · Stanford CS231N · 2024</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/main.js"></script>
+</body>
+</html>
